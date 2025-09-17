@@ -24,6 +24,7 @@ class State<T> {
     this.listeners.push(listenerFn);
   }
 }
+
 class ProjectState extends State<Project> {
   private projects: Project[] = [];
   private static instance: ProjectState;
@@ -38,10 +39,6 @@ class ProjectState extends State<Project> {
     }
     this.instance = new ProjectState();
     return this.instance;
-  }
-
-  addListener(listenerFn: Listener<Project>) {
-    this.listeners.push(listenerFn);
   }
 
   addProject(title: string, description: string, numOfPeople: number) {
@@ -110,7 +107,6 @@ function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
   const adjDescriptor: PropertyDescriptor = {
     configurable: true,
-    enumerable: false,
     get() {
       const boundFn = originalMethod.bind(this);
       return boundFn;
@@ -140,11 +136,11 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
       this.templateElement.content,
       true
     );
-
     this.element = importedNode.firstElementChild as U;
     if (newElementId) {
       this.element.id = newElementId;
     }
+
     this.attach(insertAtStart);
   }
 
@@ -157,6 +153,35 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 
   abstract configure(): void;
   abstract renderContent(): void;
+}
+
+// ProjectItem Class
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+  private project: Project;
+
+  get people() {
+    if (this.project.people === 1) {
+      return '1 person';
+    } else {
+      return `${this.project.people} people`;
+    }
+  }
+
+  constructor(hostId: string, project: Project) {
+    super('single-project', hostId, false, project.id);
+    this.project = project;
+
+    this.configure();
+    this.renderContent();
+  }
+
+  configure() {}
+
+  renderContent() {
+    this.element.querySelector('h2')!.textContent = this.project.title;
+    this.element.querySelector('h3')!.textContent = this.people + ' assigned';
+    this.element.querySelector('p')!.textContent = this.project.description;
+  }
 }
 
 // ProjectList Class
@@ -196,15 +221,13 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
       `${this.type}-projects-list`
     )! as HTMLUListElement;
     listEl.innerHTML = '';
-    for (const projectItem of this.assignedProjects) {
-      const listItem = document.createElement('li');
-      listItem.textContent = projectItem.title;
-      listEl.appendChild(listItem);
+    for (const prjItem of this.assignedProjects) {
+      new ProjectItem(this.element.querySelector('ul')!.id, prjItem);
     }
   }
 }
 
-// ProjectInput class
+// ProjectInput Class
 class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
@@ -212,7 +235,6 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
 
   constructor() {
     super('project-input', 'app', true, 'user-input');
-
     this.titleInputElement = this.element.querySelector(
       '#title'
     ) as HTMLInputElement;
@@ -222,7 +244,6 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.peopleInputElement = this.element.querySelector(
       '#people'
     ) as HTMLInputElement;
-
     this.configure();
   }
 
@@ -241,13 +262,11 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
       value: enteredTitle,
       required: true,
     };
-
     const descriptionValidatable: Validatable = {
       value: enteredDescription,
       required: true,
       minLength: 5,
     };
-
     const peopleValidatable: Validatable = {
       value: +enteredPeople,
       required: true,
@@ -278,13 +297,13 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     event.preventDefault();
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
-      const [title, description, people] = userInput;
-      projectState.addProject(title, description, people);
+      const [title, desc, people] = userInput;
+      projectState.addProject(title, desc, people);
       this.clearInputs();
     }
   }
 }
 
-const projectInput = new ProjectInput();
-const activeProjectList = new ProjectList('active');
-const finishedProjectList = new ProjectList('finished');
+const prjInput = new ProjectInput();
+const activePrjList = new ProjectList('active');
+const finishedPrjList = new ProjectList('finished');
